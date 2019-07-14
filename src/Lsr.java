@@ -51,12 +51,12 @@ public class Lsr {
         }
     }
 
-    void send(Node router) throws IOException {
+ /*   void send(Node router) throws IOException {
         InetAddress address = InetAddress.getByName("localhost");
         int sequence = 0;
 
         while (true) {
-            /* format pkt data */
+            *//* format pkt data *//*
 
             // router/seqNum/router cost/router cost/ etc
             String message = router.toString() + "/" + sequence + "/";
@@ -78,7 +78,7 @@ public class Lsr {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             socket.receive(packet);
 
-            /* process pkt and add to network */
+            *//* process pkt and add to network *//*
             String msg = new String(packet.getData(), 0, packet.getLength());
             String[] splitMsg = msg.split("/");
 
@@ -103,5 +103,5 @@ public class Lsr {
                 network.makeEdge(neighbour, this.router, cost);
             }
         }
-    }
+    }*/
 }
