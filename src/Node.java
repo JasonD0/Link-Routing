@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.Map;
 
 public class Node {
     private String routerID;
@@ -27,7 +28,18 @@ public class Node {
         neighbours.put(n, cost);
     }
 
- /*   public boolean test(Node n) {
-        return neighbours.containsKey(n);
-    }*/
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        if (this.getClass() != o.getClass()) return false;
+
+        Node n = (Node) o;
+        return (this.routerID.equals(n.routerID) && this.port == n.port);
+    }
+
+    @Override
+    public String toString() {
+        return this.routerID;
+    }
 }
