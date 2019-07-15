@@ -38,7 +38,6 @@ public class Dijkstra {
     }
 
     private void minPath(Node curr) {
-
         for (Node n : curr.getNeighbours().keySet()) {
             if (!processedNodes.contains(n) &&
                     Double.compare(distance.get(curr), Double.MAX_VALUE) != 0 &&
