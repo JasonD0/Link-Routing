@@ -6,14 +6,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class Dijkstra {
+public class Dijkstra implements Runnable {
+    private final static long ROUTE_UPDATE_INTERVAL = 30000; // 30 seconds
+    private boolean running;
     private Map<Node, Double> distance;
     private Map<Node, Node> predecessors;
     private Set<Node> processedNodes;
     private Set<Node> noPathTo;
-    private Set<Node> nodes;
+    private List<Node> nodes;
+    private Network network;
+    private Node router;
 
-    public void getPaths(Network network, Node src) {
+    public Dijkstra(Network network, Node router) {
+        this.network = network;
+        this.router = router;
+    }
+
+    public synchronized void stop() {
+        this.running = false;
+    }
+
+    private synchronized boolean isRunning() {
+        return this.running;
+    }
+
+    private void getPaths() {
         distance = new HashMap<>();
         predecessors = new HashMap<>();
         processedNodes = new HashSet<>();
@@ -25,7 +42,7 @@ public class Dijkstra {
             noPathTo.add(n);
         }
 
-        distance.put(src, 0.0);
+        distance.put(router, 0.0);
 
         while (!noPathTo.isEmpty()) {
             Node curr = minNodeDistance();
@@ -33,8 +50,6 @@ public class Dijkstra {
             noPathTo.remove(curr);
             minPath(curr);
         }
-
-        showPaths(src);
     }
 
     private void minPath(Node curr) {
@@ -66,15 +81,15 @@ public class Dijkstra {
         return minNode;
     }
 
-    public void showPath(Node dest) {
+    private void showPath(Node dest) {
         if (predecessors.get(dest) == null) return;
 
         ArrayList<String> path = new ArrayList<>();
-        Node pred = dest;
+        Node predecessor = dest;
 
-        path.add(pred.toString());
-        while ((pred = predecessors.get(pred)) != null) {
-            path.add(pred.toString());
+        path.add(predecessor.toString());
+        while ((predecessor = predecessors.get(predecessor)) != null) {
+            path.add(predecessor.toString());
         }
 
         Collections.reverse(path);
@@ -84,8 +99,8 @@ public class Dijkstra {
         System.out.println(" and the cost is " + distance.get(dest));
     }
 
-    public void showPaths(Node src) {
-        System.out.println("I am Router " + src.toString());
+    private void showPaths() {
+        System.out.println("I am Router " + router.toString());
         List<Node> sortedNodes = new ArrayList<>(nodes);
         Collections.sort(sortedNodes, (Node o1, Node o2) -> {
             String n1 = o1.toString();
@@ -94,9 +109,24 @@ public class Dijkstra {
         });
 
         for (Node n : sortedNodes) {
-            if (n.toString().equals(src.toString())) continue;
+            if (n.toString().equals(router.toString())) continue;
             System.out.print("Least cost path to router " + n.toString() + ": ");
             showPath(n);
+        }
+    }
+
+    @Override
+    public void run() {
+        this.running = true;
+
+        while (isRunning()) {
+            try {
+                Thread.sleep(ROUTE_UPDATE_INTERVAL);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            getPaths();
+            showPaths();
         }
     }
 }

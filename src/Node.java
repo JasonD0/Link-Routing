@@ -1,14 +1,16 @@
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Node {
     private String routerID;
     private int port;
-    private HashMap<Node, Double> neighbours;
+    private Map<Node, Double> neighbours;
 
     public Node(String routerID, int port) {
         this.routerID = routerID;
         this.port = port;
-        this.neighbours = new HashMap<>();
+        this.neighbours = Collections.synchronizedMap(new HashMap<>());
     }
 
     public String getRouterID() {
@@ -19,11 +21,11 @@ public class Node {
         return this.port;
     }
 
-    public HashMap<Node, Double> getNeighbours() {
-        return this.neighbours;
+    public Map<Node, Double> getNeighbours() {
+        return new HashMap<>(this.neighbours);
     }
 
-    public void addEdge(Node n, double cost) {
+    public void addNeighbour(Node n, double cost) {
         neighbours.put(n, cost);
     }
 

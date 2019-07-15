@@ -2,125 +2,65 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.Map;
 
 public class Lsr {
-    final static long UPDATE_INTERVAL = 1000;           // 1 second
-    final static long ROUTE_UPDATE_INTERVAL = 30000;    // 30 seconds
-    private DatagramSocket socket;
-    private Node router;
-    private HashMap<String, Integer> nodeSequence;
-
-    public Lsr(String routerID, int port) throws IOException {
-        this.socket = new DatagramSocket(port);
-        this.router = new Node(routerID, port);
-        this.nodeSequence = new HashMap<>();
-    }
-
     public static void main(String[] args) throws IOException {
-        String configName = args[0];
-        BufferedReader br = new BufferedReader(new FileReader(new File(configName)));
-
         Network network = new Network();
+        String configFile = args[0];
 
-        /* process config file */
+        BufferedReader br = new BufferedReader(new FileReader(new File(configFile)));
         String msg = br.readLine();
         String[] splitMsg = msg.split(" ");
-
         String routerID = splitMsg[0];
         int port = Integer.valueOf(splitMsg[1]);
         Node currNode = new Node(routerID, port);
-        network.addNode(currNode);
 
-        new Lsr(routerID, port);
+        connectRouter(network, currNode, br);
 
-        msg = br.readLine();
+        DatagramSocket socket = new DatagramSocket(port);
+        Receiver r = new Receiver(socket, network, currNode);
+        new Thread(r).start();
+
+        Sender s = new Sender(socket, network, currNode);
+        new Thread(s).start();
+
+        Dijkstra d = new Dijkstra(network, currNode);
+        new Thread(d).start();
+    }
+
+    private static void connectRouter(Network network, Node router, BufferedReader br) throws IOException {
+        network.addNode(router);
+
+        String msg = br.readLine(); // ignore number of neighbours
         while ((msg = br.readLine()) != null) {
-            splitMsg = msg.split(" ");
-            routerID = splitMsg[0];
+            String[] splitMsg = msg.split(" ");
+            String routerID = splitMsg[0];
             Double cost = Double.valueOf(splitMsg[1]);
-            port = Integer.valueOf(splitMsg[2]);
+            int port = Integer.valueOf(splitMsg[2]);
 
             Node neighbourNode = new Node(routerID, port);
             network.addNode(neighbourNode);
-            network.makeEdge(neighbourNode, currNode, cost);
-        }
-        /* TEST
-        Node A = new Node("A", 1);
-        Node B = new Node("B", 2);
-        Node C = new Node("C", 3);
-        Node D = new Node("D", 4);
-        Node E = new Node("E", 5);
-        network.addNode(A);
-        network.addNode(B);
-        network.addNode(C);
-        network.addNode(D);
-        network.addNode(E);
-        network.makeEdge(A, B, 3.0);
-        network.makeEdge(A, C, 1.0);
-        network.makeEdge(B, C, 7.0);
-        network.makeEdge(B, D, 5.0);
-        network.makeEdge(B, E, 1.0);
-        network.makeEdge(C, D, 2.0);
-        network.makeEdge(D, E, 7.0);*/
-        network.getPaths(currNode);
-    }
-
- /*   void send(Node router) throws IOException {
-        InetAddress address = InetAddress.getByName("localhost");
-        int sequence = 0;
-
-        while (true) {
-            *//* format pkt data *//*
-
-            // router/seqNum/router cost/router cost/ etc
-            String message = router.toString() + "/" + sequence + "/";
-
-            for (Map.Entry<Node, Double> m : router.getNeighbours().entrySet()) {
-                Node n = m.getKey();
-                message += n.toString() + " " + n.getPort() + " " + m.getValue() + "/";
-            }
-            message += "/\r\n";
-
-            byte[] msg = message.getBytes();
-            DatagramPacket packet = new DatagramPacket(msg, msg.length, address, 1555);
-            socket.send(packet);
+            network.makeEdge(neighbourNode, router, cost);
         }
     }
-
-    void receive(Network network) throws IOException {
-        while (true) {
-            DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-            socket.receive(packet);
-
-            *//* process pkt and add to network *//*
-            String msg = new String(packet.getData(), 0, packet.getLength());
-            String[] splitMsg = msg.split("/");
-
-            String node = splitMsg[0];
-            int sequence = Integer.valueOf(splitMsg[1]);
-
-            // received unchanged packet
-            if (nodeSequence.containsKey(node)) {
-                if (nodeSequence.get(node) <= sequence) continue;
-            } else {
-                nodeSequence.put(node, sequence);
-            }
-
-            for (int i = 2; i < splitMsg.length - 1; ++i) {
-                String edges = splitMsg[i];
-                String[] edgesInfo = edges.split(" ");
-                String routerID = edgesInfo[0];
-                int port = Integer.valueOf(edgesInfo[1]);
-                double cost = Double.valueOf(edgesInfo[2]);
-                Node neighbour = new Node(routerID, port);
-                network.addNode(neighbour);
-                network.makeEdge(neighbour, this.router, cost);
-            }
-        }
-    }*/
 }
+
+ /* TEST
+Node A = new Node("A", 1);
+Node B = new Node("B", 2);
+Node C = new Node("C", 3);
+Node D = new Node("D", 4);
+Node E = new Node("E", 5);
+network.addNode(A);
+network.addNode(B);
+network.addNode(C);
+network.addNode(D);
+network.addNode(E);
+network.makeEdge(A, B, 3.0);
+network.makeEdge(A, C, 1.0);
+network.makeEdge(B, C, 7.0);
+network.makeEdge(B, D, 5.0);
+network.makeEdge(B, E, 1.0);
+network.makeEdge(C, D, 2.0);
+network.makeEdge(D, E, 7.0);*/

@@ -1,13 +1,14 @@
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Network {
     private Set<Node> nodes;
-    private Dijkstra alg;
 
     public Network() {
-        this.nodes = new HashSet<>();
-        this.alg = new Dijkstra();
+        this.nodes = Collections.synchronizedSet(new HashSet<>());
     }
 
     public void addNode(Node n) {
@@ -22,17 +23,13 @@ public class Network {
         return null;
     }
 
-    public Set<Node> getNodes() {
-        return this.nodes;
+    public List<Node> getNodes() {
+        return new ArrayList<>(this.nodes);
     }
 
     public void makeEdge(Node n1, Node n2, double cost) {
-        n1.addEdge(n2, cost);
-        n2.addEdge(n1, cost);
-    }
-
-    public void getPaths(Node src) {
-        this.alg.getPaths(this, src);
+        n1.addNeighbour(n2, cost);
+        n2.addNeighbour(n1, cost);
     }
 
     public int getSize() {
