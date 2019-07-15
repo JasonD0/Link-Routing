@@ -49,6 +49,25 @@ public class Lsr {
             network.addNode(neighbourNode);
             network.makeEdge(neighbourNode, currNode, cost);
         }
+        /* TEST
+        Node A = new Node("A", 1);
+        Node B = new Node("B", 2);
+        Node C = new Node("C", 3);
+        Node D = new Node("D", 4);
+        Node E = new Node("E", 5);
+        network.addNode(A);
+        network.addNode(B);
+        network.addNode(C);
+        network.addNode(D);
+        network.addNode(E);
+        network.makeEdge(A, B, 3.0);
+        network.makeEdge(A, C, 1.0);
+        network.makeEdge(B, C, 7.0);
+        network.makeEdge(B, D, 5.0);
+        network.makeEdge(B, E, 1.0);
+        network.makeEdge(C, D, 2.0);
+        network.makeEdge(D, E, 7.0);*/
+        network.getPaths(currNode);
     }
 
  /*   void send(Node router) throws IOException {

@@ -7,6 +7,7 @@ public class Network {
 
     public Network() {
         this.nodes = new HashSet<>();
+        this.alg = new Dijkstra();
     }
 
     public void addNode(Node n) {
@@ -32,5 +33,9 @@ public class Network {
 
     public void getPaths(Node src) {
         this.alg.getPaths(this, src);
+    }
+
+    public int getSize() {
+        return this.nodes.size();
     }
 }

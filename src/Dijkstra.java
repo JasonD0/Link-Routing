@@ -1,16 +1,16 @@
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class Dijkstra {
-    private HashMap<Node, Double> distance;
-    private HashMap<Node, Node> predecessors;
-    private HashSet<Node> processedNodes;
-    private HashSet<Node> noPathTo;
+    private Map<Node, Double> distance;
+    private Map<Node, Node> predecessors;
+    private Set<Node> processedNodes;
+    private Set<Node> noPathTo;
     private Set<Node> nodes;
 
     public void getPaths(Network network, Node src) {
@@ -33,14 +33,17 @@ public class Dijkstra {
             noPathTo.remove(curr);
             minPath(curr);
         }
+
+        showPaths(src);
     }
 
     private void minPath(Node curr) {
+
         for (Node n : curr.getNeighbours().keySet()) {
             if (!processedNodes.contains(n) &&
-                    Double.compare(distance.get(n), Double.MAX_VALUE) != 0 &&
-                    distance.get(n) + curr.getNeighbours().get(n) < distance.get(curr)) {
-                distance.put(curr, distance.get(n) + curr.getNeighbours().get(n));
+                    Double.compare(distance.get(curr), Double.MAX_VALUE) != 0 &&
+                    distance.get(curr) + curr.getNeighbours().get(n) < distance.get(n)) {
+                distance.put(n, distance.get(curr) + curr.getNeighbours().get(n));
                 noPathTo.add(n);
                 predecessors.put(n, curr);
             }
@@ -55,7 +58,7 @@ public class Dijkstra {
             if (minNode == null) {
                 minNode = n;
 
-            } else if (distance.getOrDefault(n, Double.MAX_VALUE) < minDist) {
+            } else if (Double.compare(distance.getOrDefault(n, Double.MAX_VALUE), minDist) <= 0) {
                 minDist = distance.getOrDefault(n, Double.MAX_VALUE);
                 minNode = n;
             }
@@ -66,30 +69,34 @@ public class Dijkstra {
 
     public void showPath(Node dest) {
         if (predecessors.get(dest) == null) return;
+
         ArrayList<String> path = new ArrayList<>();
-        Node pred;
-        int cost = 0;
-        path.add(dest.toString());
+        Node pred = dest;
 
-        /*while ((pred = predecessors.get(dest)) != null) {
+        path.add(pred.toString());
+        while ((pred = predecessors.get(pred)) != null) {
             path.add(pred.toString());
-        }*/
-        for (Map.Entry<Node, Node> m : predecessors.entrySet()) {
-            path.add(m.getKey().toString());
-            cost += m.getKey().getNeighbours().get(m.getValue());
         }
 
-        Collections.sort(path);
+        Collections.reverse(path);
         for (String s : path) {
-            System.out.println(s);
+            System.out.print(s);
         }
-        System.out.println(" and the cost is ");
+        System.out.println(" and the cost is " + distance.get(dest));
     }
 
     public void showPaths(Node src) {
         System.out.println("I am Router " + src.toString());
-        for (Node n : nodes) {
-            System.out.println("Least cost path to router " + n.toString() + ": ");
+        List<Node> sortedNodes = new ArrayList<>(nodes);
+        Collections.sort(sortedNodes, (Node o1, Node o2) -> {
+            String n1 = o1.toString();
+            String n2 = o2.toString();
+            return n1.compareTo(n2);
+        });
+
+        for (Node n : sortedNodes) {
+            if (n.toString().equals(src.toString())) continue;
+            System.out.print("Least cost path to router " + n.toString() + ": ");
             showPath(n);
         }
     }
