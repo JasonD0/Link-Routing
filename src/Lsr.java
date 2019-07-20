@@ -18,16 +18,17 @@ public class Lsr {
         Network network = new Network();
         Buffer buffer = new Buffer();
 
-        /*connectRouter(network, currNode, br);
+        connectRouter(network, currNode, br);
 
         DatagramSocket socket = new DatagramSocket(port);
+
         Receiver r = new Receiver(socket, network, buffer, currNode);
         new Thread(r).start();
 
         Sender s = new Sender(socket, network, buffer, currNode);
         new Thread(s).start();
-*/
-        Node A = new Node("A", 1);
+
+        /*Node A = new Node("A", 1);
         Node B = new Node("B", 2);
         Node C = new Node("C", 3);
         Node D = new Node("D", 4);
@@ -47,9 +48,9 @@ public class Lsr {
         network.makeEdge(C, D, 1.6);
         network.makeEdge(D, E, 2.9);
         network.makeEdge(D, F, 0.7);
-        network.makeEdge(E, F, 6.2);
+        network.makeEdge(E, F, 6.2);*/
 
-        Dijkstra d = new Dijkstra(network, A);
+        Dijkstra d = new Dijkstra(network, currNode);
         new Thread(d).start();
     }
 

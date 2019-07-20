@@ -11,8 +11,9 @@ public class Network {
         this.nodes = Collections.synchronizedSet(new HashSet<>());
     }
 
-    public void addNode(Node n) {
+    public Node addNode(Node n) {
         this.nodes.add(n);
+        return getNode(n.toString());
     }
 
     public Node getNode(String routerID) {

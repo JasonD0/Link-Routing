@@ -56,8 +56,6 @@ public class Sender implements Runnable {
                 e.printStackTrace();
             }
 
-            buffer.getPackets();
-
             message = buffer.getPacket();
             String sender = message.split("/")[0];
             byte[] msg = message.getBytes();

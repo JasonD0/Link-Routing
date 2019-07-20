@@ -49,26 +49,26 @@ public class Receiver implements Runnable {
 
                 // ignore unchanged packet
                 if (nodeSequence.getOrDefault(router, sequence+1) <= sequence) continue;
-
                 nodeSequence.put(router, sequence);
 
                 Node sender = new Node(router, port);
-                network.addNode(sender);
+                sender = network.addNode(sender);
 
                 buffer.addPacket(msg);
 
                 // Get the node's neighbours and costs
-                for (int i = 3; i < splitMsg.length - 1; ++i) {
+                for (int i = 3; i < splitMsg.length; ++i) {
                     String edges = splitMsg[i];
                     String[] edgesInfo = edges.split(" ");
+                    if (edgesInfo.length != 3) continue;
 
                     String routerID = edgesInfo[0];
                     double cost = Double.valueOf(edgesInfo[1]);
                     port = Integer.valueOf(edgesInfo[2]);
 
                     Node neighbour = new Node(routerID, port);
-                    network.addNode(neighbour);
-                    network.makeEdge(neighbour, this.router, cost);
+                    neighbour = network.addNode(neighbour);
+                    network.makeEdge(neighbour, sender, cost);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
