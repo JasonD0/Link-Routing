@@ -7,15 +7,15 @@ import java.util.Map;
 import java.util.Set;
 
 public class Dijkstra implements Runnable {
-    private final static long ROUTE_UPDATE_INTERVAL = 30000; // 30 seconds
+    private final static long ROUTE_UPDATE_INTERVAL = 30000; // 25 seconds
     private boolean running;
+    private Network network;
+    private Node router;
     private Map<Node, Double> distance;
     private Map<Node, Node> predecessors;
     private Set<Node> processedNodes;
     private Set<Node> noPathTo;
     private List<Node> nodes;
-    private Network network;
-    private Node router;
 
     public Dijkstra(Network network, Node router) {
         this.network = network;
@@ -71,6 +71,7 @@ public class Dijkstra implements Runnable {
         for (Node n : noPathTo) {
             if (minNode == null) {
                 minNode = n;
+                minDist = distance.get(n);
 
             } else if (Double.compare(distance.getOrDefault(n, Double.MAX_VALUE), minDist) <= 0) {
                 minDist = distance.getOrDefault(n, Double.MAX_VALUE);
@@ -96,7 +97,7 @@ public class Dijkstra implements Runnable {
         for (String s : path) {
             System.out.print(s);
         }
-        System.out.println(" and the cost is " + distance.get(dest));
+        System.out.printf(" and the cost is %.2f\n", distance.get(dest));
     }
 
     private void showPaths() {
@@ -128,5 +129,6 @@ public class Dijkstra implements Runnable {
             getPaths();
             showPaths();
         }
+        stop();
     }
 }

@@ -6,13 +6,15 @@ import java.util.HashMap;
 public class Receiver implements Runnable {
     private DatagramSocket socket;
     private Network network;
+    private Buffer buffer;
     private Node router;
     private boolean running;
-    private HashMap<Node, Integer> nodeSequence;
+    private HashMap<String, Integer> nodeSequence;
 
-    public Receiver(DatagramSocket socket, Network network, Node router) {
+    public Receiver(DatagramSocket socket, Network network, Buffer buffer, Node router) {
         this.socket = socket;
         this.network = network;
+        this.buffer = buffer;
         this.router = router;
         this.nodeSequence = new HashMap<>();
     }
@@ -28,40 +30,50 @@ public class Receiver implements Runnable {
     @Override
     public void run() {
         this.running = true;
-        stop();
+        receive();
     }
 
-     /*void receive() throws IOException {
+     void receive() {
         while (isRunning()) {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-            socket.receive(packet);
+            try {
+                socket.receive(packet);
 
-            // process pkt and add to network
-            String msg = new String(packet.getData(), 0, packet.getLength());
-            String[] splitMsg = msg.split("/");
+                // process pkt and add to network
+                String msg = new String(packet.getData(), 0, packet.getLength());
+                String[] splitMsg = msg.split("/");
 
-            String node = splitMsg[0];
-            int sequence = Integer.valueOf(splitMsg[1]);
+                String router = splitMsg[0];
+                int sequence = Integer.valueOf(splitMsg[1]);
+                int port = Integer.valueOf(splitMsg[2]);
 
-            // received unchanged packet
-            if (nodeSequence.containsKey(node)) {
-                if (nodeSequence.get(node) <= sequence) continue;
-            } else {
-                nodeSequence.put(node, sequence);
-            }
+                // ignore unchanged packet
+                if (nodeSequence.getOrDefault(router, sequence+1) <= sequence) continue;
 
-            // Get the node's neighbours and costs
-            for (int i = 2; i < splitMsg.length - 1; ++i) {
-                String edges = splitMsg[i];
-                String[] edgesInfo = edges.split(" ");
-                String routerID = edgesInfo[0];
-                double cost = Double.valueOf(edgesInfo[1]);
-                int port = Integer.valueOf(edgesInfo[2]);
+                nodeSequence.put(router, sequence);
 
-                Node neighbour = new Node(routerID, port);
-                network.addNode(neighbour);
-                network.makeEdge(neighbour, this.router, cost);
+                Node sender = new Node(router, port);
+                network.addNode(sender);
+
+                buffer.addPacket(msg);
+
+                // Get the node's neighbours and costs
+                for (int i = 3; i < splitMsg.length - 1; ++i) {
+                    String edges = splitMsg[i];
+                    String[] edgesInfo = edges.split(" ");
+
+                    String routerID = edgesInfo[0];
+                    double cost = Double.valueOf(edgesInfo[1]);
+                    port = Integer.valueOf(edgesInfo[2]);
+
+                    Node neighbour = new Node(routerID, port);
+                    network.addNode(neighbour);
+                    network.makeEdge(neighbour, this.router, cost);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-    }*/
+        stop();
+    }
 }

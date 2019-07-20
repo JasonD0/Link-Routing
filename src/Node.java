@@ -1,6 +1,7 @@
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class Node {
     private String routerID;
@@ -31,12 +32,19 @@ public class Node {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null) return false;
-        if (this.getClass() != o.getClass()) return false;
+        if (this == o) return true;
+        if (o instanceof Node) {
+            Node n = (Node) o;
+            return (this.routerID.equals(n.toString()) && this.port == n.getPort());
+        } else {
+            return false;
+        }
+    }
 
-        Node n = (Node) o;
-        return (this.routerID.equals(n.routerID) && this.port == n.port);
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.routerID, this.port);
     }
 
     @Override
