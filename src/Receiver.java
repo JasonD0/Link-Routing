@@ -33,30 +33,31 @@ public class Receiver implements Runnable {
         receive();
     }
 
+    // orig sender  and sender of copy  so dont send a rerouted pkt back    eg A-> B   B-> C    stop C -> B   and C->A
      void receive() {
         while (isRunning()) {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             try {
                 socket.receive(packet);
 
-                // process pkt and add to network
                 String msg = new String(packet.getData(), 0, packet.getLength());
                 String[] splitMsg = msg.split("/");
 
-                String router = splitMsg[0];
-                int sequence = Integer.valueOf(splitMsg[1]);
-                int port = Integer.valueOf(splitMsg[2]);
+                String origSender = splitMsg[0];
+                //String sender = splitMsg[1];
+                int sequence = Integer.valueOf(splitMsg[2]);
+                int port = Integer.valueOf(splitMsg[3]);
 
                 // ignore unchanged packet
-                if (nodeSequence.getOrDefault(router, sequence+1) <= sequence) continue;
-                nodeSequence.put(router, sequence);
+                if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
+                nodeSequence.put(origSender, sequence);
 
-                Node sender = new Node(router, port);
-                sender = network.addNode(sender);
+                Node senderNode = new Node(origSender, port);
+                senderNode = network.addNode(senderNode);
 
                 buffer.addPacket(msg);
 
-                // Get the node's neighbours and costs
+                // Get the original sender's neighbours and costs
                 for (int i = 3; i < splitMsg.length; ++i) {
                     String edges = splitMsg[i];
                     String[] edgesInfo = edges.split(" ");
@@ -68,7 +69,7 @@ public class Receiver implements Runnable {
 
                     Node neighbour = new Node(routerID, port);
                     neighbour = network.addNode(neighbour);
-                    network.makeEdge(neighbour, sender, cost);
+                    network.makeEdge(neighbour, senderNode, cost);
                 }
             } catch (IOException e) {
                 e.printStackTrace();

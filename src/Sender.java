@@ -42,7 +42,7 @@ public class Sender implements Runnable {
         int sequence = 0;
 
         // router/seqNum/router cost port/*
-        String message = router.toString() + "/" + sequence + "/" + router.getPort() + "/";
+        String message = router.toString() + "/" + router.toString() + "/" + sequence + "/" + router.getPort() + "/";
         for (Map.Entry<Node, Double> m : router.getNeighbours().entrySet()) {
             Node n = m.getKey();
             message += n.toString() + " " + m.getValue() + " " + n.getPort() + "/";
@@ -56,11 +56,19 @@ public class Sender implements Runnable {
                 e.printStackTrace();
             }
 
+            buffer.getPackets();
+
             message = buffer.getPacket();
-            String sender = message.split("/")[0];
-            byte[] msg = message.getBytes();
+            String[] splitMsg = message.split("/");
+            String origSender = splitMsg[0];
+            String sender = splitMsg[1];
+            if (!splitMsg[1].equals(this.router.toString())) {
+                splitMsg[1] = this.router.toString();
+                sender = splitMsg[1];
+            }
+            byte[] msg = String.join("/", splitMsg).getBytes();
             for (Node n : router.getNeighbours().keySet()) {
-                if (n.toString().equals(sender)) continue;  // don't send packet to the sender of that packet
+                if (n.toString().equals(sender) || n.toString().equals(origSender)) continue;  // don't send packet to the sender of that packet
                 DatagramPacket packet = new DatagramPacket(msg, msg.length, address, n.getPort());
                 socket.send(packet);
             }

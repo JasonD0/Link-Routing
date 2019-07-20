@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class Dijkstra implements Runnable {
-    private final static long ROUTE_UPDATE_INTERVAL = 30000; // 25 seconds
+    private final static long ROUTE_UPDATE_INTERVAL = 25000; // 25 seconds
     private boolean running;
     private Network network;
     private Node router;
