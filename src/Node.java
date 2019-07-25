@@ -30,6 +30,13 @@ public class Node {
         neighbours.put(n, cost);
     }
 
+    public boolean isNeighbour(String routerID) {
+        for (Node n : neighbours) {
+            if (n.toString().equals(routerID)) return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null) return false;
