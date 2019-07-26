@@ -33,44 +33,54 @@ public class Receiver implements Runnable {
         receive();
     }
 
-    // orig sender  and sender of copy  so dont send a rerouted pkt back    eg A-> B   B-> C    stop C -> B   and C->A
      void receive() {
         while (isRunning()) {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             try {
                 socket.receive(packet);
 
-                String msg = new String(packet.getData(), 0, packet.getLength());
-                String[] splitMsg = msg.split("/");
+                String pkt = new String(packet.getData(), 0, packet.getLength());
+                String[] splitPkt = pkt.split("-");
+                if (splitPkt.length == 0) continue;
 
-                String origSender = splitMsg[0];
-                //String sender = splitMsg[1];
-                int sequence = Integer.valueOf(splitMsg[2]);
-                int port = Integer.valueOf(splitMsg[3]);
+                /* get information related to the original sender of the packet */
+                String[] origSenderInfo = splitPkt[0].split("/");
+                String origSender = origSenderInfo[1];
+                int sequence = Integer.valueOf(origSenderInfo[2]);
 
                 // ignore unchanged packet
                 if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
                 nodeSequence.put(origSender, sequence);
 
-                Node senderNode = new Node(origSender, port);
-                senderNode = network.addNode(senderNode);
+                buffer.addPacket(pkt);
+                buffer.doNotify();
 
-                buffer.addPacket(msg);
+                /* add each router's information in the packet to the topology */
+                for (int j = 0; j < splitPkt.length; ++j) {
+                    String[] splitLSA = splitPkt[j].split("/");
 
-                // Get the original sender's neighbours and costs
-                for (int i = 3; i < splitMsg.length; ++i) {
-                    String edges = splitMsg[i];
-                    String[] edgesInfo = edges.split(" ");
-                    if (edgesInfo.length != 3) continue;
+                    // router information
+                    Node nodeOne = new Node(splitLSA[1], Integer.valueOf(splitLSA[3]));
+                    nodeOne = network.addNode(nodeOne);
 
-                    String routerID = edgesInfo[0];
-                    double cost = Double.valueOf(edgesInfo[1]);
-                    port = Integer.valueOf(edgesInfo[2]);
+                    if (!splitLSA[1].equals(this.router.toString())) buffer.addPacket(splitPkt[j], splitLSA[1]);
 
-                    Node neighbour = new Node(routerID, port);
-                    neighbour = network.addNode(neighbour);
-                    network.makeEdge(neighbour, senderNode, cost);
+                    for (int i = 3; i < splitLSA.length; ++i) {
+                        // adding to topology
+                        String edges = splitLSA[i];
+                        String[] edgesInfo = edges.split(" ");
+                        if (edgesInfo.length != 3) continue;
+
+                        String routerID = edgesInfo[0];
+                        double cost = Double.valueOf(edgesInfo[1]);
+                        int port = Integer.valueOf(edgesInfo[2]);
+
+                        Node nodeTwo = new Node(routerID, port);
+                        nodeTwo = network.addNode(nodeTwo);
+                        network.makeEdge(nodeOne, nodeTwo, cost);
+                    }
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }

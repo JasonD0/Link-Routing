@@ -1,27 +1,52 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Network {
     private Set<Node> nodes;
+    private Map<Node, Boolean> failedNodes;
 
     public Network() {
         this.nodes = Collections.synchronizedSet(new HashSet<>());
+        this.failedNodes = Collections.synchronizedMap(new HashMap<>());
     }
 
     public Node addNode(Node n) {
         this.nodes.add(n);
+        this.failedNodes.put(n, false);
         return getNode(n.toString());
     }
 
-    public Node getNode(String routerID) {
+    public boolean isFailedNode(String routerID) {
+        Node n = getNode(routerID);
+        return failedNodes.getOrDefault(n, true);
+    }
+
+    public boolean isFailedNode(Node n) {
+        return failedNodes.getOrDefault(n, true);
+    }
+
+    public void setFailed(String routerID) {
+        Node n = getNode(routerID);
+        this.failedNodes.put(n, true);
+    }
+
+    private Node getNode(String routerID) {
         for (Node n : nodes) {
             if (!n.toString().equals(routerID)) continue;
             return n;
         }
         return null;
+    }
+
+    public void removeNode(String routerID) {
+        Node n = getNode(routerID);
+        this.nodes.remove(n);
+        this.failedNodes.put(n, true);
     }
 
     public List<Node> getNodes() {

@@ -30,6 +30,10 @@ public class Node {
         neighbours.put(n, cost);
     }
 
+  /*  public void removeNeighbour(Node n) {
+        this.neighbours.remove(n);
+    }*/
+
     @Override
     public boolean equals(Object o) {
         if (o == null) return false;

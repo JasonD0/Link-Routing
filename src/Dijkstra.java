@@ -38,6 +38,7 @@ public class Dijkstra implements Runnable {
         nodes = network.getNodes();
 
         for (Node n : nodes) {
+            if (network.isFailedNode(n)) continue;
             distance.put(n, Double.MAX_VALUE);
             noPathTo.add(n);
         }
@@ -54,6 +55,7 @@ public class Dijkstra implements Runnable {
 
     private void minPath(Node curr) {
         for (Node n : curr.getNeighbours().keySet()) {
+            if (network.isFailedNode(n)) continue;
             if (!processedNodes.contains(n) &&
                     Double.compare(distance.get(curr), Double.MAX_VALUE) != 0 &&
                     distance.get(curr) + curr.getNeighbours().get(n) < distance.get(n)) {
