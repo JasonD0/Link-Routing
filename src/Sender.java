@@ -11,6 +11,7 @@ public class Sender implements Runnable {
     private Network network;
     private Buffer buffer;
     private Node router;
+    private int sequence;
     private boolean running;
     private Timer t;
 
@@ -19,6 +20,7 @@ public class Sender implements Runnable {
         this.network = network;
         this.buffer = buffer;
         this.router = router;
+        this.sequence = 0;
         this.t = new Timer(UPDATE_INTERVAL, e -> {
             try {
                 LSA();
@@ -43,12 +45,12 @@ public class Sender implements Runnable {
 
         /* generate initial LSA */
         // sender  orig sender  orig sender seq  orig sender port
-        String message = router.toString() + "/" + router.toString() + "/" + 0 + "/" + router.getPort() + "/";
+        String message = router.toString() + "/" + router.toString() + "/" + this.sequence + "/" + router.getPort() + "/";
         for (Map.Entry<Node, Double> m : router.getNeighbours().entrySet()) {
             Node n = m.getKey();
             message += n.toString() + " " + m.getValue() + " " + n.getPort() + "/";
         }
-        buffer.initLSA(message);
+        buffer.initLSA(router.toString(), message);
         t.start();
 
         try {
@@ -63,12 +65,15 @@ public class Sender implements Runnable {
      * @throws IOException
      */
     private void LSA() throws IOException {
-        InetAddress address = InetAddress.getByName("localhost");
-        for (Node n : router.getNeighbours().keySet()) {
-            byte[] bytes = buffer.getPeriodicPacket().getBytes();
-            DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, n.getPort());
-            socket.send(packet);
-        }
+        String pkt = new String(buffer.getPeriodicPacket());
+
+        /* changes sequence number if the LSA has changed */
+        String[] splitPkt = pkt.split("/");
+        splitPkt[2] = (buffer.updated()) ? String.valueOf(++sequence) : String.valueOf(sequence);
+        pkt = String.join("/", splitPkt);
+
+        buffer.addPacket(pkt);
+        buffer.doNotify();
     }
 
     /**
@@ -84,15 +89,16 @@ public class Sender implements Runnable {
             String message = buffer.getPacket();
 
             /* get information related to the immediate sender of the packet */
-            String[] splitMsg = message.split("-")[0].split("/");
-            String sender = splitMsg[0];
-            String origSender = splitMsg[1];
-            if (!sender.equals(this.router.toString())) {
-                splitMsg[0] = this.router.toString();
-                sender = splitMsg[0];
-            }
+            String[] splitMsg = message.split("-");
+            String[] m = splitMsg[0].split("/");
+            String origSender = m[1];
+            m[0] = this.router.toString();  // set sender to this router
+            String sender = m[0];
+            splitMsg[0] = String.join("/", m);
+            message = String.join("-", splitMsg);
 
-            byte[] msg = String.join("/", splitMsg).getBytes();
+            byte[] msg = message.getBytes();
+
             for (Node n : router.getNeighbours().keySet()) {
                 // don't send packet to the sender of that packet
                 if (n.toString().equals(sender) || n.toString().equals(origSender)) continue;

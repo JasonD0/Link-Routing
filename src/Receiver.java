@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Receiver implements Runnable {
     private DatagramSocket socket;
@@ -10,6 +11,8 @@ public class Receiver implements Runnable {
     private Node router;
     private boolean running;
     private HashMap<String, Integer> nodeSequence;
+    private HashMap<String, Integer> heartBeat;
+    private int count;
 
     public Receiver(DatagramSocket socket, Network network, Buffer buffer, Node router) {
         this.socket = socket;
@@ -17,6 +20,8 @@ public class Receiver implements Runnable {
         this.buffer = buffer;
         this.router = router;
         this.nodeSequence = new HashMap<>();
+        this.heartBeat = new HashMap<>();
+        this.count = 0;
     }
 
     public synchronized void stop() {
@@ -29,11 +34,20 @@ public class Receiver implements Runnable {
 
     @Override
     public void run() {
+        Processor p = new Processor(network, buffer, router);
+        new Thread(p).start();
+
+        for (Node n : router.getNeighbours().keySet()) {
+            heartBeat.put(n.toString(), 0);
+        }
+
         this.running = true;
         receive();
     }
 
      void receive() {
+        int neighbourCount = router.getNeighbours().size();
+        int l = 0;
         while (isRunning()) {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             try {
@@ -41,12 +55,44 @@ public class Receiver implements Runnable {
 
                 String pkt = new String(packet.getData(), 0, packet.getLength());
                 String[] splitPkt = pkt.split("-");
+
                 if (splitPkt.length == 0) continue;
 
                 /* get information related to the original sender of the packet */
                 String[] origSenderInfo = splitPkt[0].split("/");
+                String sender = origSenderInfo[0];
                 String origSender = origSenderInfo[1];
                 int sequence = Integer.valueOf(origSenderInfo[2]);
+
+                /*// change packets here when neighbour died
+                // detecting failed router neighbours
+                // ignore origsender  might not be neighbour
+                int beat = heartBeat.getOrDefault(sender, 0) + 1;
+                count++;
+                // failed router (sender) came back
+                if (beat == 0) {
+                    heartBeat.put(sender, 1);
+                    nodeSequence.put(sender, -1);
+
+                // indicate sender alive
+                } else {
+                    heartBeat.put(sender, beat);
+                }
+
+                // fail routers not sending packets
+                if (count == neighbourCount + 1) {
+                    for (Map.Entry<String, Integer> m : heartBeat.entrySet()) {
+                        if (m.getValue() == 0) {
+                            network.removeNode(m.getKey());
+                            buffer.removeRouter(m.getKey());
+                            heartBeat.put(m.getKey(), -1);
+                            nodeSequence.put(m.getKey(), -1);
+                        }
+                        else heartBeat.put(m.getKey(), 0);
+                    }
+                    count = 0;
+                }
+*/
 
                 // ignore unchanged packet
                 if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
@@ -54,32 +100,7 @@ public class Receiver implements Runnable {
 
                 buffer.addPacket(pkt);
                 buffer.doNotify();
-
-                /* add each router's information in the packet to the topology */
-                for (int j = 0; j < splitPkt.length; ++j) {
-                    String[] splitLSA = splitPkt[j].split("/");
-
-                    // router information
-                    Node nodeOne = new Node(splitLSA[1], Integer.valueOf(splitLSA[3]));
-                    nodeOne = network.addNode(nodeOne);
-
-                    if (!splitLSA[1].equals(this.router.toString())) buffer.addPacket(splitPkt[j], splitLSA[1]);
-
-                    for (int i = 3; i < splitLSA.length; ++i) {
-                        // adding to topology
-                        String edges = splitLSA[i];
-                        String[] edgesInfo = edges.split(" ");
-                        if (edgesInfo.length != 3) continue;
-
-                        String routerID = edgesInfo[0];
-                        double cost = Double.valueOf(edgesInfo[1]);
-                        int port = Integer.valueOf(edgesInfo[2]);
-
-                        Node nodeTwo = new Node(routerID, port);
-                        nodeTwo = network.addNode(nodeTwo);
-                        network.makeEdge(nodeOne, nodeTwo, cost);
-                    }
-                }
+                buffer.doProcessingNotify();
 
             } catch (IOException e) {
                 e.printStackTrace();

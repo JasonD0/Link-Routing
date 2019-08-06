@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class Dijkstra implements Runnable {
-    private final static long ROUTE_UPDATE_INTERVAL = 25000; // 25 seconds
+    private final static long ROUTE_UPDATE_INTERVAL = 30000;
     private boolean running;
     private Network network;
     private Node router;
@@ -113,6 +113,7 @@ public class Dijkstra implements Runnable {
 
         for (Node n : sortedNodes) {
             if (n.toString().equals(router.toString())) continue;
+            if (network.isFailedNode(n)) continue;
             System.out.print("Least cost path to router " + n.toString() + ": ");
             showPath(n);
         }

@@ -30,9 +30,13 @@ public class Network {
         return failedNodes.getOrDefault(n, true);
     }
 
-    public void setFailed(String routerID) {
-        Node n = getNode(routerID);
-        this.failedNodes.put(n, true);
+    public Set<Node> getFailedNodes() {
+        Set<Node> s = new HashSet<>();
+        for (Node n : failedNodes.keySet()) {
+            if (!failedNodes.get(n)) continue;
+            s.add(n);
+        }
+        return s;
     }
 
     private Node getNode(String routerID) {
@@ -45,6 +49,11 @@ public class Network {
 
     public void removeNode(String routerID) {
         Node n = getNode(routerID);
+        this.nodes.remove(n);
+        this.failedNodes.put(n, true);
+    }
+
+    public void removeNode(Node n) {
         this.nodes.remove(n);
         this.failedNodes.put(n, true);
     }
