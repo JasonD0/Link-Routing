@@ -8,17 +8,20 @@ public class Buffer {
     private Map<String, String> LSA;
     private Vector<String> routers;
     private Vector<String> processing_packets;
-    int flag = 0;
+    private int flag;
+    private int failedCount;
 
     public void removeRouter(String routerID) {
         LSA.remove(routerID);
         routers.remove(routerID);
+        ++failedCount;
         for (Map.Entry<String, String> lsa : LSA.entrySet()) {
             String key = lsa.getKey();
             String value = lsa.getValue();
 
             LSA.put(key, value.replaceAll(routerID + " .*?/", ""));
         }
+        this.packets.add(getPeriodicPacket());
     }
 
     public Buffer() {
@@ -26,6 +29,12 @@ public class Buffer {
         this.LSA = Collections.synchronizedMap(new HashMap<>());
         this.routers = new Vector<>();
         this.processing_packets = new Vector<>();
+        this.flag = 0;
+        this.failedCount = 0;
+    }
+
+    public int getReplacedCount() {
+        return this.failedCount;
     }
 
     public void addPeriodicPacket(String packet) {

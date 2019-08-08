@@ -30,15 +30,6 @@ public class Network {
         return failedNodes.getOrDefault(n, true);
     }
 
-    public Set<Node> getFailedNodes() {
-        Set<Node> s = new HashSet<>();
-        for (Node n : failedNodes.keySet()) {
-            if (!failedNodes.get(n)) continue;
-            s.add(n);
-        }
-        return s;
-    }
-
     private Node getNode(String routerID) {
         for (Node n : nodes) {
             if (!n.toString().equals(routerID)) continue;
@@ -65,9 +56,5 @@ public class Network {
     public void makeEdge(Node n1, Node n2, double cost) {
         n1.addNeighbour(n2, cost);
         //n2.addNeighbour(n1, cost);
-    }
-
-    public int getSize() {
-        return this.nodes.size();
     }
 }

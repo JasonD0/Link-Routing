@@ -49,6 +49,15 @@ public class Processor implements Runnable {
                     neighbours.remove(nodeTwo);
                 }
 
+                // missing neighbour indicates detection of failed node
+                // update topology and packets
+                if (neighbours.size() > 0) {
+                    for (Node n : neighbours.keySet()) {
+                        network.removeNode(n);
+                        buffer.removeRouter(n.toString());
+                    }
+                }
+
                 buffer.addLSA(splitPkt[j], routerID, false);
             }
         }

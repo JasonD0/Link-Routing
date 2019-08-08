@@ -14,6 +14,7 @@ public class Sender implements Runnable {
     private Node router;
     private int sequence;
     private int prevPktLength;
+    private int failedCount;
     private Timer t;
 
     public Sender(DatagramSocket socket, Network network, Buffer buffer, Node router) {
@@ -23,6 +24,7 @@ public class Sender implements Runnable {
         this.router = router;
         this.sequence = 0;
         this.prevPktLength = 0;
+        this.failedCount = 0;
         this.t = new Timer(UPDATE_INTERVAL, e -> {
             try {
                 LSA();
@@ -58,11 +60,17 @@ public class Sender implements Runnable {
     private void LSA() throws IOException {
         String pkt = buffer.getPeriodicPacket();
 
+        int count = buffer.getReplacedCount();
+        boolean replaced = (failedCount < count);
+        boolean increasedPacket = (prevPktLength < pkt.length());
+
         /* changes sequence number if the LSA has changed */
         String[] splitPkt = pkt.split("/");
-        splitPkt[2] = (pkt.length() > prevPktLength) ? String.valueOf(++sequence) : String.valueOf(sequence);
+        splitPkt[2] = (replaced || increasedPacket) ? String.valueOf(++sequence) : String.valueOf(sequence);
         pkt = String.join("/", splitPkt);
-        if (pkt.length() > prevPktLength) prevPktLength = pkt.length();
+
+        if (increasedPacket) prevPktLength = pkt.length();
+        if (replaced) failedCount = count;
 
         buffer.addPeriodicPacket(pkt);
     }

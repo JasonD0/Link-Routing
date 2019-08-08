@@ -38,7 +38,7 @@ public class Receiver implements Runnable {
     }
 
      void receive() {
-        int neighbourCount = router.getNeighbours().size();
+        int neighbourCount = (router.getNeighbours().size() < 3) ? 3 : router.getNeighbours().size();
         while (true) {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             try {
@@ -56,34 +56,37 @@ public class Receiver implements Runnable {
                 String origSender = origSenderInfo[1];
                 int sequence = Integer.valueOf(origSenderInfo[2]);
 
+
                 // change packets here when neighbour died
                 // detecting failed router neighbours
                 // ignore origsender  might not be neighbour
-                /*int beat = heartBeat.getOrDefault(sender, 0) + 1;
+                int beat = heartBeat.getOrDefault(sender, 0) + 1;
                 count++;
                 // failed router (sender) came back
                 if (beat == 0) {
                     heartBeat.put(sender, 1);
-                    nodeSequence.put(sender, -1);
+                    nodeSequence.remove(sender);    // so when get packet from sender   process no matter what
 
-                // indicate sender alive
+                // sender wasn't indicated as failed, update beat
                 } else {
                     heartBeat.put(sender, beat);
                 }
 
                 // fail routers not sending packets
-                if (count == neighbourCount + 1) {
+                if (count == neighbourCount * 2) {
                     for (Map.Entry<String, Integer> m : heartBeat.entrySet()) {
+                        // router died
                         if (m.getValue() == 0) {
                             network.removeNode(m.getKey());
                             buffer.removeRouter(m.getKey());
                             heartBeat.put(m.getKey(), -1);
-                            nodeSequence.put(m.getKey(), -1);
                         }
-                        else heartBeat.put(m.getKey(), 0);
+                        else if (m.getValue() != -1) heartBeat.put(m.getKey(), 0);  // reset heartbeat
+                        // if -1 stay dead
                     }
                     count = 0;
-                }*/
+                }
+
 
                 // ignore unchanged packet
                 if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
