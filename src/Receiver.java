@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,7 +11,7 @@ public class Receiver implements Runnable {
     private Buffer buffer;
     private Buffer processing_buffer;
     private Node router;
-    private HashMap<String, Integer> nodeSequence;
+    private Map<String, Integer> nodeSequence;
     private HashMap<String, Integer> heartBeat;
     private int count;
 
@@ -20,14 +21,14 @@ public class Receiver implements Runnable {
         this.buffer = buffer;
         this.processing_buffer = pb;
         this.router = router;
-        this.nodeSequence = new HashMap<>();
+        this.nodeSequence = Collections.synchronizedMap(new HashMap<>());
         this.heartBeat = new HashMap<>();
         this.count = 0;
     }
 
     @Override
     public void run() {
-        Processor p = new Processor(network, processing_buffer, router);
+        Processor p = new Processor(network, processing_buffer, router, nodeSequence);
         new Thread(p).start();
 
         for (Node n : router.getNeighbours().keySet()) {
@@ -87,8 +88,7 @@ public class Receiver implements Runnable {
                     count = 0;
                 }
 
-
-                // ignore unchanged packet
+                // drop unchanged packet
                 if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
                 nodeSequence.put(origSender, sequence);
 

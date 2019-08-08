@@ -4,11 +4,13 @@ public class Processor implements Runnable {
     private Network network;
     private Buffer buffer;
     private Node router;
+    private Map<String, Integer> nodeSequence;
 
-    public Processor(Network network, Buffer buffer, Node router) {
+    public Processor(Network network, Buffer buffer, Node router, Map<String, Integer> nodeSequence) {
         this.network = network;
         this.buffer = buffer;
         this.router = router;
+        this.nodeSequence = nodeSequence;
     }
 
     @Override
@@ -55,6 +57,7 @@ public class Processor implements Runnable {
                     for (Node n : neighbours.keySet()) {
                         network.removeNode(n);
                         buffer.removeRouter(n.toString());
+                        nodeSequence.remove(n.toString());  // so wont drop new packet from revived node
                     }
                 }
 
