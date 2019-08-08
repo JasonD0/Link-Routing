@@ -17,12 +17,13 @@ public class Lsr {
 
         Network network = new Network();
         Buffer buffer = new Buffer();
+        Buffer processing_buffer = new Buffer();
 
-        connectRouter(network, currNode, br);
+        config(network, currNode, br);
 
         DatagramSocket socket = new DatagramSocket(port);
 
-        Receiver r = new Receiver(socket, network, buffer, currNode);
+        Receiver r = new Receiver(socket, network, buffer, processing_buffer, currNode);
         new Thread(r).start();
 
         Sender s = new Sender(socket, network, buffer, currNode);
@@ -32,7 +33,7 @@ public class Lsr {
         new Thread(d).start();
     }
 
-    private static void connectRouter(Network network, Node router, BufferedReader br) throws IOException {
+    private static void config(Network network, Node router, BufferedReader br) throws IOException {
         network.addNode(router);
 
         String msg = br.readLine(); // ignore number of neighbours
@@ -44,7 +45,7 @@ public class Lsr {
 
             Node neighbourNode = new Node(routerID, port);
             network.addNode(neighbourNode);
-            network.makeEdge(neighbourNode, router, cost);
+            network.makeEdge(router, neighbourNode, cost);
         }
     }
 }

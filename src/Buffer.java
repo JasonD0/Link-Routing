@@ -8,17 +8,17 @@ public class Buffer {
     private Map<String, String> LSA;
     private Vector<String> routers;
     private Vector<String> processing_packets;
-    private boolean updated;
+    int flag = 0;
 
     public void removeRouter(String routerID) {
+        LSA.remove(routerID);
+        routers.remove(routerID);
         for (Map.Entry<String, String> lsa : LSA.entrySet()) {
             String key = lsa.getKey();
             String value = lsa.getValue();
 
             LSA.put(key, value.replaceAll(routerID + " .*?/", ""));
         }
-        LSA.remove(routerID);
-        routers.remove(routerID);
     }
 
     public Buffer() {
@@ -26,19 +26,28 @@ public class Buffer {
         this.LSA = Collections.synchronizedMap(new HashMap<>());
         this.routers = new Vector<>();
         this.processing_packets = new Vector<>();
-        this.updated = false;
     }
 
-    public void addPacket(String packet, String routerID, boolean replace) {
+    public void addPeriodicPacket(String packet) {
+        ++flag;
+        if (flag % 2 == 0) {
+            flag = 0;
+            return;
+        }
+        this.packets.add(packet);
+        doNotify();
+    }
+
+    public void addLSA(String packet, String routerID, boolean replace) {
         if (this.LSA.containsKey(routerID) && !replace) return;
         this.LSA.put(routerID, packet);
         this.routers.add(routerID);
-        this.updated = true;
+        System.out.println(routerID);
     }
 
     public void addPacket(String packet) {
         this.packets.add(packet);
-        this.processing_packets.add(packet);
+        doNotify();
     }
 
     public void initLSA(String router, String packet) {
@@ -49,12 +58,6 @@ public class Buffer {
     public String getPacket() {
         String packet = packets.get(0);
         packets.remove(0);
-        return packet;
-    }
-
-    public String getProcessingPacket() {
-        String packet = processing_packets.get(0);
-        processing_packets.remove(0);
         return packet;
     }
 
@@ -83,6 +86,18 @@ public class Buffer {
         }
     }
 
+
+    public void addProcessingPacket(String pkt) {
+        this.processing_packets.add(pkt);
+        doProcessingNotify();
+    }
+
+    public String getProcessingPacket() {
+        String packet = processing_packets.get(0);
+        processing_packets.remove(0);
+        return packet;
+    }
+
     public void doProcessingWait() {
         if (processing_packets.size() > 0) return;
         try {
@@ -98,11 +113,5 @@ public class Buffer {
         synchronized(processing_packets) {
             processing_packets.notify();
         }
-    }
-
-    public boolean updated() {
-        boolean u = this.updated;
-        if (u) this.updated = false;
-        return u;
     }
 }

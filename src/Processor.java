@@ -4,7 +4,6 @@ public class Processor implements Runnable {
     private Network network;
     private Buffer buffer;
     private Node router;
-    private boolean running;
 
     public Processor(Network network, Buffer buffer, Node router) {
         this.network = network;
@@ -12,18 +11,9 @@ public class Processor implements Runnable {
         this.router = router;
     }
 
-    public synchronized void stop() {
-        this.running = false;
-    }
-
-    private synchronized boolean isRunning() {
-        return this.running;
-    }
-
     @Override
     public void run() {
-        this.running = true;
-        while (isRunning()) {
+        while (true) {
             buffer.doProcessingWait();
 
             String pkt = buffer.getProcessingPacket();
@@ -59,9 +49,8 @@ public class Processor implements Runnable {
                     neighbours.remove(nodeTwo);
                 }
 
-                buffer.addPacket(splitPkt[j], routerID, false);
+                buffer.addLSA(splitPkt[j], routerID, false);
             }
         }
-        stop();
     }
 }

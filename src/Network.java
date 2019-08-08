@@ -64,7 +64,7 @@ public class Network {
 
     public void makeEdge(Node n1, Node n2, double cost) {
         n1.addNeighbour(n2, cost);
-        n2.addNeighbour(n1, cost);
+        //n2.addNeighbour(n1, cost);
     }
 
     public int getSize() {

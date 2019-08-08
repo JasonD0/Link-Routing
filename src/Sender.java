@@ -3,6 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Map;
+import java.util.Set;
 import javax.swing.Timer;
 
 public class Sender implements Runnable {
@@ -12,7 +13,7 @@ public class Sender implements Runnable {
     private Buffer buffer;
     private Node router;
     private int sequence;
-    private boolean running;
+    private int prevPktLength;
     private Timer t;
 
     public Sender(DatagramSocket socket, Network network, Buffer buffer, Node router) {
@@ -21,6 +22,7 @@ public class Sender implements Runnable {
         this.buffer = buffer;
         this.router = router;
         this.sequence = 0;
+        this.prevPktLength = 0;
         this.t = new Timer(UPDATE_INTERVAL, e -> {
             try {
                 LSA();
@@ -30,19 +32,8 @@ public class Sender implements Runnable {
         });
     }
 
-    public synchronized void stop() {
-        this.running = false;
-        t.stop();
-    }
-
-    private synchronized boolean isRunning() {
-        return this.running;
-    }
-
     @Override
     public void run() {
-        this.running = true;
-
         /* generate initial LSA */
         // sender  orig sender  orig sender seq  orig sender port
         String message = router.toString() + "/" + router.toString() + "/" + this.sequence + "/" + router.getPort() + "/";
@@ -65,15 +56,15 @@ public class Sender implements Runnable {
      * @throws IOException
      */
     private void LSA() throws IOException {
-        String pkt = new String(buffer.getPeriodicPacket());
+        String pkt = buffer.getPeriodicPacket();
 
         /* changes sequence number if the LSA has changed */
         String[] splitPkt = pkt.split("/");
-        splitPkt[2] = (buffer.updated()) ? String.valueOf(++sequence) : String.valueOf(sequence);
+        splitPkt[2] = (pkt.length() > prevPktLength) ? String.valueOf(++sequence) : String.valueOf(sequence);
         pkt = String.join("/", splitPkt);
+        if (pkt.length() > prevPktLength) prevPktLength = pkt.length();
 
-        buffer.addPacket(pkt);
-        buffer.doNotify();
+        buffer.addPeriodicPacket(pkt);
     }
 
     /**
@@ -83,8 +74,7 @@ public class Sender implements Runnable {
     void send() throws IOException {
         InetAddress address = InetAddress.getByName("localhost");
 
-        while (isRunning()) {
-            // while packet sender/origSender not failed    if failed -> removePacket(message)
+        while (true) {
             buffer.doWait();
             String message = buffer.getPacket();
 
@@ -99,13 +89,13 @@ public class Sender implements Runnable {
 
             byte[] msg = message.getBytes();
 
-            for (Node n : router.getNeighbours().keySet()) {
+            Set<Node> s = router.getNeighbours().keySet();
+            for (Node n : s) {
                 // don't send packet to the sender of that packet
                 if (n.toString().equals(sender) || n.toString().equals(origSender)) continue;
                 DatagramPacket packet = new DatagramPacket(msg, msg.length, address, n.getPort());
                 socket.send(packet);
             }
         }
-        stop();
     }
 }
