@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.util.Map;
 
 public class Lsr {
     public static void main(String[] args) throws IOException {
@@ -16,17 +17,17 @@ public class Lsr {
         Node currNode = new Node(routerID, port);
 
         Network network = new Network();
+
         Buffer buffer = new Buffer();
-        Buffer processing_buffer = new Buffer();
 
         config(network, currNode, br);
 
         DatagramSocket socket = new DatagramSocket(port);
 
-        Receiver r = new Receiver(socket, network, buffer, processing_buffer, currNode);
+        Receiver r = new Receiver(socket, network, buffer, currNode);
         new Thread(r).start();
 
-        Sender s = new Sender(socket, network, buffer, currNode);
+        Sender s = new Sender(socket, buffer, currNode);
         new Thread(s).start();
 
         Dijkstra d = new Dijkstra(network, currNode);
@@ -49,44 +50,3 @@ public class Lsr {
         }
     }
 }
-
- /* TEST
-Node A = new Node("A", 1);
-Node B = new Node("B", 2);
-Node C = new Node("C", 3);
-Node D = new Node("D", 4);
-Node E = new Node("E", 5);
-network.addNode(A);
-network.addNode(B);
-network.addNode(C);
-network.addNode(D);
-network.addNode(E);
-network.makeEdge(A, B, 3.0);
-network.makeEdge(A, C, 1.0);
-network.makeEdge(B, C, 7.0);
-network.makeEdge(B, D, 5.0);
-network.makeEdge(B, E, 1.0);
-network.makeEdge(C, D, 2.0);
-network.makeEdge(D, E, 7.0);*/
-
-/*Node A = new Node("A", 1);
-Node B = new Node("B", 2);
-Node C = new Node("C", 3);
-Node D = new Node("D", 4);
-Node E = new Node("E", 5);
-Node F = new Node("F", 6);
-network.addNode(A);
-network.addNode(B);
-network.addNode(C);
-network.addNode(D);
-network.addNode(E);
-network.addNode(F);
-network.makeEdge(A, B, 6.5);
-network.makeEdge(A, F, 2.2);
-network.makeEdge(B, C, 1.1);
-network.makeEdge(B, D, 4.2);
-network.makeEdge(B, E, 3.2);
-network.makeEdge(C, D, 1.6);
-network.makeEdge(D, E, 2.9);
-network.makeEdge(D, F, 0.7);
-network.makeEdge(E, F, 6.2);*/

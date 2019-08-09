@@ -9,7 +9,6 @@ import javax.swing.Timer;
 public class Sender implements Runnable {
     private final static int UPDATE_INTERVAL = 1000;
     private DatagramSocket socket;
-    private Network network;
     private Buffer buffer;
     private Node router;
     private int sequence;
@@ -17,9 +16,8 @@ public class Sender implements Runnable {
     private int failedCount;
     private Timer t;
 
-    public Sender(DatagramSocket socket, Network network, Buffer buffer, Node router) {
+    public Sender(DatagramSocket socket, Buffer buffer, Node router) {
         this.socket = socket;
-        this.network = network;
         this.buffer = buffer;
         this.router = router;
         this.sequence = 0;
@@ -38,12 +36,14 @@ public class Sender implements Runnable {
     public void run() {
         /* generate initial LSA */
         // sender  orig sender  orig sender seq  orig sender port
-        String message = router.toString() + "/" + router.toString() + "/" + this.sequence + "/" + router.getPort() + "/";
-        for (Map.Entry<Node, Double> m : router.getNeighbours().entrySet()) {
+        String message = router.toString() + "/" + router.toString() + "/" + 0 + "/" + router.getPort() + "/";
+        Set<Map.Entry<Node, Double>> neighbours = router.getNeighbours().entrySet();
+        for (Map.Entry<Node, Double> m : neighbours) {
             Node n = m.getKey();
             message += n.toString() + " " + m.getValue() + " " + n.getPort() + "/";
         }
         buffer.initLSA(router.toString(), message);
+
         t.start();
 
         try {
@@ -59,7 +59,6 @@ public class Sender implements Runnable {
      */
     private void LSA() throws IOException {
         String pkt = buffer.getPeriodicPacket();
-
         int count = buffer.getReplacedCount();
         boolean replaced = (failedCount < count);
         boolean increasedPacket = (prevPktLength < pkt.length());
@@ -72,7 +71,7 @@ public class Sender implements Runnable {
         if (increasedPacket) prevPktLength = pkt.length();
         if (replaced) failedCount = count;
 
-        buffer.addPeriodicPacket(pkt);
+        buffer.addPacket(pkt, true);
     }
 
     /**

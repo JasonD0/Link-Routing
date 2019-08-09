@@ -1,91 +1,141 @@
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
 public class Buffer {
-    private Vector<String> packets;
-    private Map<String, String> LSA;
-    private Vector<String> routers;
-    private Vector<String> processing_packets;
-    private int flag;
-    private int failedCount;
-
-    public void removeRouter(String routerID) {
-        LSA.remove(routerID);
-        routers.remove(routerID);
-        ++failedCount;
-        for (Map.Entry<String, String> lsa : LSA.entrySet()) {
-            String key = lsa.getKey();
-            String value = lsa.getValue();
-
-            LSA.put(key, value.replaceAll(routerID + " .*?/", ""));
-        }
-        this.packets.add(getPeriodicPacket());
-    }
+    private static List<String> packets;
+    private static List<String> periodic_packets;
+    private static Map<String, String> LSA;
+    private static List<String> routers;    // keep order of insertion (make sure this router first)
+    private static List<String> processing_packets;
+    private static int failedCount;
 
     public Buffer() {
-        this.packets = new Vector<>();
-        this.LSA = Collections.synchronizedMap(new HashMap<>());
-        this.routers = new Vector<>();
-        this.processing_packets = new Vector<>();
-        this.flag = 0;
-        this.failedCount = 0;
+        packets = Collections.synchronizedList(new ArrayList<>());
+        periodic_packets = Collections.synchronizedList(new ArrayList<>());
+        LSA = Collections.synchronizedMap(new HashMap<>());
+        routers = Collections.synchronizedList(new ArrayList<>());
+        processing_packets = Collections.synchronizedList(new ArrayList<>());
+        failedCount = 0;
     }
 
-    public int getReplacedCount() {
-        return this.failedCount;
-    }
-
-    public void addPeriodicPacket(String packet) {
-        ++flag;
-        if (flag % 2 == 0) {
-            flag = 0;
-            return;
+    private void addRouter(String router) {
+        synchronized (routers) {
+            if (routers.contains(router)) return;
+            routers.add(router);
         }
-        this.packets.add(packet);
-        doNotify();
     }
 
-    public void addLSA(String packet, String routerID, boolean replace) {
-        if (this.LSA.containsKey(routerID) && !replace) return;
-        this.LSA.put(routerID, packet);
-        this.routers.add(routerID);
+    public synchronized void initLSA(String router, String packet) {
+        synchronized (LSA){
+            LSA.put(router, packet);
+        }
+        synchronized (routers) {
+            addRouter(router);
+        }
+        periodic_packets.add(packet);
+    }
+
+    public void addLSA(String packet, String routerID) {
+        synchronized (LSA) {
+            if (LSA.containsKey(routerID)) return;
+            LSA.put(routerID, packet);
+        }
+        synchronized (routers) {
+            addRouter(routerID);
+        }
         System.out.println(routerID);
     }
 
-    public void addPacket(String packet) {
-        this.packets.add(packet);
+    public void addPacket(String packet, boolean periodic) {
+        if (periodic) {
+            synchronized (periodic_packets) {
+                periodic_packets.add(packet);
+            }
+
+        } else {
+            synchronized (packets) {
+                packets.add(packet);
+            }
+        }
+
         doNotify();
     }
 
-    public void initLSA(String router, String packet) {
-        this.LSA.put(router, packet);
-        this.routers.add(router);
+    public String getPacket() {
+        // prioritise forwarding packets received
+        synchronized (packets) {
+            if (packets.size() > 0) {
+                String packet = packets.get(0);
+                packets.remove(0);
+                return packet;
+            }
+        }
+
+        // get LSA
+        synchronized (periodic_packets) {
+            String packet = periodic_packets.get(0);
+            periodic_packets.remove(0);
+            return packet;
+        }
     }
 
-    public String getPacket() {
-        String packet = packets.get(0);
-        packets.remove(0);
-        return packet;
+    public void removeRouter(String routerID) {
+        synchronized (LSA) {
+            LSA.remove(routerID);
+            for (Map.Entry<String, String> lsa : LSA.entrySet()) {
+                String key = lsa.getKey();
+                String value = lsa.getValue();
+
+                LSA.put(key, value.replaceAll(routerID + " .*?/", ""));
+            }
+        }
+
+        synchronized (routers) {
+            routers.remove(routerID);
+        }
+
+        synchronized (periodic_packets) {
+            periodic_packets.clear();
+            periodic_packets.add(getPeriodicPacket());
+        }
+
+        ++failedCount;
+    }
+
+    public int getReplacedCount() {
+        return failedCount;
     }
 
     public String getPeriodicPacket() {
         String packet = "";
-        for (String router : routers) {
-            packet += LSA.get(router) + "-";
+        Vector<String> routersCpy;
+        Map<String, String> LSAcpy;
+        synchronized (routers) {
+            routersCpy = new Vector<>(routers);
+        }
+        synchronized (LSA) {
+            LSAcpy = new HashMap<>(LSA);
+        }
+        for (String router : routersCpy) {
+            packet += LSAcpy.get(router) + "-";
         }
         return packet;
     }
 
     public void doWait() {
-        if (packets.size() > 0) return;
-        try {
-            synchronized(packets) {
-                packets.wait();
+        synchronized(packets) {
+            synchronized (periodic_packets) {
+                if (packets.size() > 0 || periodic_packets.size() > 0) return;
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            try {
+                packets.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -97,24 +147,28 @@ public class Buffer {
 
 
     public void addProcessingPacket(String pkt) {
-        this.processing_packets.add(pkt);
+        synchronized (processing_packets) {
+            processing_packets.add(pkt);
+        }
         doProcessingNotify();
     }
 
     public String getProcessingPacket() {
-        String packet = processing_packets.get(0);
-        processing_packets.remove(0);
-        return packet;
+        synchronized (processing_packets) {
+            String packet = processing_packets.get(0);
+            processing_packets.remove(0);
+            return packet;
+        }
     }
 
     public void doProcessingWait() {
-        if (processing_packets.size() > 0) return;
-        try {
-            synchronized(processing_packets) {
+        synchronized (processing_packets) {
+            if (processing_packets.size() > 0) return;
+            try {
                 processing_packets.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 

@@ -23,16 +23,16 @@ public class Node {
     }
 
     public Map<Node, Double> getNeighbours() {
-        return new HashMap<>(this.neighbours);
+        synchronized (neighbours) {
+            return new HashMap<>(neighbours);
+        }
     }
 
     public void addNeighbour(Node n, double cost) {
-        neighbours.put(n, cost);
+        synchronized (neighbours) {
+            neighbours.put(n, cost);
+        }
     }
-
-  /*  public void removeNeighbour(Node n) {
-        this.neighbours.remove(n);
-    }*/
 
     @Override
     public boolean equals(Object o) {

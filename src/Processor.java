@@ -57,11 +57,13 @@ public class Processor implements Runnable {
                     for (Node n : neighbours.keySet()) {
                         network.removeNode(n);
                         buffer.removeRouter(n.toString());
-                        nodeSequence.remove(n.toString());  // so wont drop new packet from revived node
+                        synchronized (nodeSequence) {
+                            nodeSequence.remove(n.toString());  // so wont drop new packet from revived node
+                        }
                     }
                 }
 
-                buffer.addLSA(splitPkt[j], routerID, false);
+                buffer.addLSA(splitPkt[j], routerID);
             }
         }
     }

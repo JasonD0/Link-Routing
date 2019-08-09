@@ -7,31 +7,36 @@ import java.util.Map;
 import java.util.Set;
 
 public class Network {
-    private Set<Node> nodes;
-    private Map<Node, Boolean> failedNodes;
+    private static Set<Node> nodes;
+    private static Map<Node, Boolean> failedNodes;
 
     public Network() {
-        this.nodes = Collections.synchronizedSet(new HashSet<>());
-        this.failedNodes = Collections.synchronizedMap(new HashMap<>());
+        nodes = Collections.synchronizedSet(new HashSet<>());
+        failedNodes = Collections.synchronizedMap(new HashMap<>());
     }
 
     public Node addNode(Node n) {
-        this.nodes.add(n);
-        this.failedNodes.put(n, false);
+        synchronized (nodes) {
+            nodes.add(n);
+        }
+        synchronized (failedNodes) {
+            failedNodes.put(n, false);
+        }
         return getNode(n.toString());
     }
 
-    public boolean isFailedNode(String routerID) {
-        Node n = getNode(routerID);
-        return failedNodes.getOrDefault(n, true);
-    }
-
     public boolean isFailedNode(Node n) {
-        return failedNodes.getOrDefault(n, true);
+        synchronized (failedNodes) {
+            return failedNodes.getOrDefault(n, true);
+        }
     }
 
     private Node getNode(String routerID) {
-        for (Node n : nodes) {
+        Set<Node> nodesCpy;
+        synchronized (nodes) {
+            nodesCpy = new HashSet<>(nodes);
+        }
+        for (Node n : nodesCpy) {
             if (!n.toString().equals(routerID)) continue;
             return n;
         }
@@ -40,17 +45,27 @@ public class Network {
 
     public void removeNode(String routerID) {
         Node n = getNode(routerID);
-        this.nodes.remove(n);
-        this.failedNodes.put(n, true);
+        synchronized (nodes) {
+            nodes.remove(n);
+        }
+        synchronized (failedNodes) {
+            failedNodes.put(n, true);
+        }
     }
 
     public void removeNode(Node n) {
-        this.nodes.remove(n);
-        this.failedNodes.put(n, true);
+        synchronized (nodes) {
+            nodes.remove(n);
+        }
+        synchronized (failedNodes) {
+            failedNodes.put(n, true);
+        }
     }
 
     public List<Node> getNodes() {
-        return new ArrayList<>(this.nodes);
+        synchronized (nodes) {
+            return new ArrayList<>(nodes);
+        }
     }
 
     public void makeEdge(Node n1, Node n2, double cost) {

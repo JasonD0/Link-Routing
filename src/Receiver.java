@@ -4,6 +4,7 @@ import java.net.DatagramSocket;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class Receiver implements Runnable {
     private DatagramSocket socket;
@@ -15,11 +16,11 @@ public class Receiver implements Runnable {
     private HashMap<String, Integer> heartBeat;
     private int count;
 
-    public Receiver(DatagramSocket socket, Network network, Buffer buffer, Buffer pb, Node router) {
+    public Receiver(DatagramSocket socket, Network network, Buffer buffer, Node router) {
         this.socket = socket;
         this.network = network;
         this.buffer = buffer;
-        this.processing_buffer = pb;
+        this.processing_buffer = new Buffer();
         this.router = router;
         this.nodeSequence = Collections.synchronizedMap(new HashMap<>());
         this.heartBeat = new HashMap<>();
@@ -28,6 +29,16 @@ public class Receiver implements Runnable {
 
     @Override
     public void run() {
+        /* generate initial LSA */
+        // sender  orig sender  orig sender seq  orig sender port
+        String message = router.toString() + "/" + router.toString() + "/" + 0 + "/" + router.getPort() + "/";
+        Set<Map.Entry<Node, Double>> neighbours = router.getNeighbours().entrySet();
+        for (Map.Entry<Node, Double> m : neighbours) {
+            Node n = m.getKey();
+            message += n.toString() + " " + m.getValue() + " " + n.getPort() + "/";
+        }
+        buffer.initLSA(router.toString(), message);
+
         Processor p = new Processor(network, processing_buffer, router, nodeSequence);
         new Thread(p).start();
 
@@ -46,7 +57,6 @@ public class Receiver implements Runnable {
                 socket.receive(packet);
 
                 String pkt = new String(packet.getData(), 0, packet.getLength());
-
                 String[] splitPkt = pkt.split("-");
 
                 if (splitPkt.length == 0) continue;
@@ -57,16 +67,18 @@ public class Receiver implements Runnable {
                 String origSender = origSenderInfo[1];
                 int sequence = Integer.valueOf(origSenderInfo[2]);
 
-
                 // change packets here when neighbour died
                 // detecting failed router neighbours
                 // ignore origsender  might not be neighbour
-                int beat = heartBeat.getOrDefault(sender, 0) + 1;
+                /*int beat = heartBeat.getOrDefault(sender, 0) + 1;
                 count++;
+
                 // failed router (sender) came back
                 if (beat == 0) {
                     heartBeat.put(sender, 1);
-                    nodeSequence.remove(sender);    // so when get packet from sender   process no matter what
+                    synchronized (nodeSequence) {
+                        nodeSequence.remove(sender);    // so when get packet from sender   process no matter what
+                    }
 
                 // sender wasn't indicated as failed, update beat
                 } else {
@@ -87,12 +99,14 @@ public class Receiver implements Runnable {
                     }
                     count = 0;
                 }
-
+*/
                 // drop unchanged packet
-                if (nodeSequence.getOrDefault(origSender, sequence+1) <= sequence) continue;
-                nodeSequence.put(origSender, sequence);
+                synchronized (nodeSequence) {
+                    if (nodeSequence.getOrDefault(origSender, sequence + 1) <= sequence) continue;
+                    nodeSequence.put(origSender, sequence);
+                }
 
-                buffer.addPacket(pkt);
+                buffer.addPacket(pkt, false);
                 processing_buffer.addProcessingPacket(pkt);
 
             } catch (IOException e) {
