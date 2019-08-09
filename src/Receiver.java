@@ -70,7 +70,7 @@ public class Receiver implements Runnable {
                 // change packets here when neighbour died
                 // detecting failed router neighbours
                 // ignore origsender  might not be neighbour
-                /*int beat = heartBeat.getOrDefault(sender, 0) + 1;
+                int beat = heartBeat.getOrDefault(sender, 0) + 1;
                 count++;
 
                 // failed router (sender) came back
@@ -99,7 +99,7 @@ public class Receiver implements Runnable {
                     }
                     count = 0;
                 }
-*/
+
                 // drop unchanged packet
                 synchronized (nodeSequence) {
                     if (nodeSequence.getOrDefault(origSender, sequence + 1) <= sequence) continue;

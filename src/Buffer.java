@@ -84,6 +84,10 @@ public class Buffer {
     }
 
     public void removeRouter(String routerID) {
+        synchronized (routers) {
+            routers.remove(routerID);
+        }
+
         synchronized (LSA) {
             LSA.remove(routerID);
             for (Map.Entry<String, String> lsa : LSA.entrySet()) {
@@ -92,10 +96,6 @@ public class Buffer {
 
                 LSA.put(key, value.replaceAll(routerID + " .*?/", ""));
             }
-        }
-
-        synchronized (routers) {
-            routers.remove(routerID);
         }
 
         synchronized (periodic_packets) {
